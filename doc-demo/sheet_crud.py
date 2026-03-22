@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-飞书电子表格（Sheet）增删改查工具
-API: POST /open-apis/sheets/v3/spreadsheets
+飞书电子表格（Sheet）增删改查工具 - 嵌入文档版本
+API: POST /open-apis/docx/v1/documents/{document_id}/blocks/{block_id}/children
+     POST /open-apis/sheets/v3/spreadsheets
      POST /open-apis/sheets/v2/spreadsheets/{spreadsheetToken}/values_append
      GET /open-apis/sheets/v2/spreadsheets/{spreadsheetToken}/values/{range}
-     PUT /open-apis/sheets/v2/spreadsheets/{spreadsheetToken}/values
+     POST /open-apis/sheets/v2/spreadsheets/{spreadsheetToken}/values_batch_update
      DELETE /open-apis/sheets/v2/spreadsheets/{spreadsheetToken}/dimension_range
 """
 
@@ -24,6 +25,45 @@ BASE_URL = "https://open.feishu.cn/open-apis"
 
 # 导入 token 获取函数
 from upload_file import get_tenant_access_token
+
+
+def add_blocks_to_document(
+    document_id: str,
+    blocks: List[Dict[str, Any]],
+    block_id: Optional[str] = None,
+    index: Optional[int] = None,
+    app_id: Optional[str] = None,
+    app_secret: Optional[str] = None
+) -> Dict[str, Any]:
+    """向文档添加块"""
+    _app_id = app_id or APP_ID
+    _app_secret = app_secret or APP_SECRET
+
+    if not _app_id or not _app_secret:
+        raise ValueError("缺少 APP_ID 或 APP_SECRET")
+
+    token = get_tenant_access_token(_app_id, _app_secret)
+    parent_block_id = block_id or document_id
+
+    url = f"{BASE_URL}/docx/v1/documents/{document_id}/blocks/{parent_block_id}/children"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    body = {"children": blocks}
+    if index is not None:
+        body["index"] = index
+
+    resp = requests.post(url, headers=headers, json=body)
+    result = resp.json()
+
+    if result.get("code") != 0:
+        error_msg = result.get("msg", "未知错误")
+        error_code = result.get("code")
+        raise Exception(f"添加块失败 [{error_code}]: {error_msg}")
+
+    return result.get("data", {})
 
 
 def create_spreadsheet(
@@ -77,6 +117,40 @@ def create_spreadsheet(
         return data
     else:
         raise Exception(f"创建电子表格失败: {result.get('msg')}")
+
+
+def add_text_block(
+    document_id: str,
+    text: str,
+    app_id: Optional[str] = None,
+    app_secret: Optional[str] = None
+) -> str:
+    """添加文本块到文档"""
+    text_block = {
+        "block_type": 2,  # 文本块
+        "text": {
+            "elements": [
+                {
+                    "type": "text_run",
+                    "text_run": {
+                        "content": text
+                    }
+                }
+            ]
+        }
+    }
+
+    result = add_blocks_to_document(
+        document_id=document_id,
+        blocks=[text_block],
+        app_id=app_id,
+        app_secret=app_secret
+    )
+
+    children = result.get("children", [])
+    if children:
+        return children[0].get("block_id")
+    return None
 
 
 def get_spreadsheet_info(
@@ -367,69 +441,29 @@ def add_sheet(
         return None
 
 
-def delete_sheet(
-    spreadsheet_token: str,
-    sheet_id: str,
-    app_id: Optional[str] = None,
-    app_secret: Optional[str] = None
-) -> bool:
-    """
-    删除工作表
-
-    Args:
-        spreadsheet_token: 表格 token
-        sheet_id: 工作表 ID
-        app_id: 应用 ID
-        app_secret: 应用密钥
-
-    Returns:
-        是否成功
-    """
-    _app_id = app_id or APP_ID
-    _app_secret = app_secret or APP_SECRET
-
-    token = get_tenant_access_token(_app_id, _app_secret)
-
-    url = f"{BASE_URL}/sheets/v2/spreadsheets/{spreadsheet_token}/sheets_batch_update"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-
-    body = {
-        "requests": [
-            {
-                "deleteSheet": {
-                    "sheetId": sheet_id
-                }
-            }
-        ]
-    }
-
-    resp = requests.post(url, headers=headers, json=body)
-    result = resp.json()
-
-    if result.get("code") == 0:
-        print(f"   ✅ 工作表删除成功")
-        return True
-    else:
-        print(f"   ❌ 工作表删除失败: {result.get('msg')}")
-        return False
-
-
 # ==================== 主功能 ====================
 
 def demo_crud():
     """演示增删改查操作"""
     print("=" * 60)
-    print("飞书电子表格（Sheet）增删改查工具")
+    print("飞书电子表格（Sheet）增删改查工具 - 嵌入文档")
     print("=" * 60)
+
+    document_id = "SZPFdznFzo45B8xSYJpcexc2nje"
+    print(f"\n📝 文档 ID: {document_id}")
 
     try:
         # 1. 创建电子表格
         print("\n📌 步骤 1: 创建电子表格...")
         spreadsheet = create_spreadsheet("员工信息表")
         spreadsheet_token = spreadsheet.get("spreadsheet_token")
+
+        # 2. 添加文本块到文档（包含表格链接）
+        print("\n📌 步骤 2: 添加表格链接到文档...")
+        table_url = spreadsheet.get('url')
+        link_text = f"📊 员工信息表: {table_url}"
+        add_text_block(document_id, link_text)
+        print(f"   ✅ 表格链接已添加到文档")
 
         # 获取默认工作表 ID
         info = get_spreadsheet_info(spreadsheet_token)
@@ -441,13 +475,13 @@ def demo_crud():
         sheet_title = sheets[0].get("title")
         print(f"   工作表: {sheet_title} ({sheet_id})")
 
-        # 2. 写入表头（增）
-        print("\n📌 步骤 2: 写入表头（增）...")
+        # 3. 写入表头（增）
+        print("\n📌 步骤 3: 写入表头（增）...")
         headers = [["姓名", "年龄", "部门", "入职日期"]]
         append_data(spreadsheet_token, sheet_id, headers)
 
-        # 3. 写入数据（增）
-        print("\n📌 步骤 3: 写入员工数据（增）...")
+        # 4. 写入数据（增）
+        print("\n📌 步骤 4: 写入员工数据（增）...")
         employee_data = [
             ["张三", 28, "技术部", "2023-01-15"],
             ["李四", 32, "产品部", "2022-08-20"],
@@ -456,15 +490,15 @@ def demo_crud():
         ]
         append_data(spreadsheet_token, sheet_id, employee_data)
 
-        # 4. 读取数据（查）
-        print("\n📌 步骤 4: 读取所有数据（查）...")
+        # 5. 读取数据（查）
+        print("\n📌 步骤 5: 读取所有数据（查）...")
         range_str = f"{sheet_id}!A1:D10"
         data = read_data(spreadsheet_token, range_str)
         for row in data:
             print(f"     {row}")
 
-        # 5. 更新数据（改）
-        print("\n📌 步骤 5: 更新张三的年龄（改）...")
+        # 6. 更新数据（改）
+        print("\n📌 步骤 6: 更新张三的年龄（改）...")
         # 使用 range 格式 sheetId!A1:B2
         write_data(spreadsheet_token, f"{sheet_id}!B2:B2", [[29]])
 
@@ -474,8 +508,8 @@ def demo_crud():
         for row in updated_data:
             print(f"     {row}")
 
-        # 6. 删除行（删）
-        print("\n📌 步骤 6: 删除第 5 行（赵六）（删）...")
+        # 7. 删除行（删）
+        print("\n📌 步骤 7: 删除第 5 行（赵六）（删）...")
         # 注意：行索引从 0 开始，表头占第 0 行，张三第 1 行，...，赵六第 4 行
         delete_rows(spreadsheet_token, sheet_id, 4, 5)
 
@@ -485,8 +519,8 @@ def demo_crud():
         for row in final_data:
             print(f"     {row}")
 
-        # 7. 添加新工作表
-        print("\n📌 步骤 7: 添加新工作表...")
+        # 8. 添加新工作表
+        print("\n📌 步骤 8: 添加新工作表...")
         new_sheet_id = add_sheet(spreadsheet_token, "部门统计")
         if new_sheet_id:
             # 向新工作表写入数据
@@ -508,7 +542,7 @@ def demo_crud():
         return 1
 
     print("\n" + "=" * 60)
-    print("完成! 请打开表格查看结果")
+    print("完成! 请刷新文档查看表格链接")
     print("=" * 60)
     return 0
 
