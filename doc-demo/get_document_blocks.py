@@ -160,6 +160,11 @@ def main():
                     print(f"  block_type: {child.get('block_type')}")
                     print(f"  完整结构:\n{json.dumps(child, ensure_ascii=False, indent=2)}")
             
+            # 如果是表格块，打印详细信息
+            if block.get('block_type') == 4:
+                print("\n📊 发现表格块！")
+                print(f"表格结构:\n{json.dumps(block.get('table', {}), ensure_ascii=False, indent=2)}")
+            
             # 打印完整块结构
             print(f"\n完整结构:\n{json.dumps(block, ensure_ascii=False, indent=2)}")
         
