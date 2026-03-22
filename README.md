@@ -74,28 +74,100 @@ python doc-demo/add_callout.py
 python doc-demo/add_table.py
 ```
 
+## AI 使用指南
+
+本项目包含一个 Claude Code Skill，用于指导 AI 操作飞书文档。
+
+### Skill 结构
+
+```
+skills/feishu-doc-operator/
+├── skill.md              # AI 技能指导文档
+└── scripts/              # 脚本文件目录
+    ├── create_docx_v1.py
+    ├── upload_file.py
+    ├── sheet_crud.py
+    ├── bitable_crud.py
+    ├── board_demo.py
+    └── ...
+```
+
+### 指导 AI 使用
+
+将 `skills/feishu-doc-operator/` 目录配置到 Claude Code 的 skills 路径中，AI 即可根据 `skill.md` 中的指导：
+
+1. **创建文档**
+   ```python
+   from scripts.create_docx_v1 import create_document
+   doc = create_document("文档标题")
+   ```
+
+2. **添加块**
+   ```python
+   from scripts.upload_file import get_tenant_access_token
+   # 使用 add_blocks_to_document 添加各种块
+   ```
+
+3. **操作电子表格**
+   ```python
+   from scripts.sheet_crud import create_spreadsheet, append_data
+   ```
+
+4. **操作画板**
+   ```python
+   from scripts.board_demo import add_board_to_document, create_board_node
+   ```
+
+### 配置 Claude Code Skills
+
+在项目根目录创建 `.claude/skills/` 目录，将 `feishu-doc-operator` 放入其中：
+
+```bash
+mkdir -p .claude/skills
+cp -r skills/feishu-doc-operator .claude/skills/
+```
+
+或在 Claude Code 配置中添加 skills 路径指向 `skills/` 目录。
+
 ## 项目结构
 
 ```
-doc-demo/
-├── create_docx_v1.py      # 文档创建
-├── set_permission.py      # 权限设置
-├── get_document_blocks.py # 读取文档结构
-├── upload_file.py         # 文件上传工具
-├── doc_api_base.py        # API 基础封装
-├── add_callout.py         # 高亮块
-├── add_table.py           # 表格
-├── add_text.py            # 文本块
-├── add_divider.py         # 分割线
-├── add_grid.py            # 分栏
-├── add_iframe.py          # 内嵌块
-├── add_chatcard.py        # 会话卡片
-├── add_image.py           # 图片
-├── add_file.py            # 文件
-├── sheet_crud.py          # 电子表格增删改查
-├── bitable_crud.py        # 多维表格增删改查
-├── board_demo.py          # 画板
-└── get_board_nodes.py     # 获取画板节点
+feishu-docx-toolkit/
+├── doc-demo/              # 示例脚本目录
+│   ├── create_docx_v1.py      # 文档创建
+│   ├── set_permission.py      # 权限设置
+│   ├── get_document_blocks.py # 读取文档结构
+│   ├── upload_file.py         # 文件上传工具
+│   ├── doc_api_base.py        # API 基础封装
+│   ├── add_callout.py         # 高亮块
+│   ├── add_table.py           # 表格
+│   ├── add_text.py            # 文本块
+│   ├── add_divider.py         # 分割线
+│   ├── add_grid.py            # 分栏
+│   ├── add_iframe.py          # 内嵌块
+│   ├── add_chatcard.py        # 会话卡片
+│   ├── add_image.py           # 图片
+│   ├── add_file.py            # 文件
+│   ├── sheet_crud.py          # 电子表格增删改查
+│   ├── bitable_crud.py        # 多维表格增删改查
+│   ├── board_demo.py          # 画板
+│   └── get_board_nodes.py     # 获取画板节点
+│
+├── skills/                # Claude Code Skills
+│   └── feishu-doc-operator/   # 飞书文档操作 Skill
+│       ├── skill.md           # AI 技能指导文档
+│       └── scripts/           # Skill 脚本目录
+│           ├── create_docx_v1.py
+│           ├── upload_file.py
+│           ├── sheet_crud.py
+│           ├── bitable_crud.py
+│           ├── board_demo.py
+│           └── ...
+│
+├── README.md              # 项目说明
+├── .env.example           # 环境变量模板
+├── .gitignore             # Git 忽略配置
+└── requirements.txt       # Python 依赖
 ```
 
 ## API 参考
