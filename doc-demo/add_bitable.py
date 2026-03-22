@@ -331,6 +331,44 @@ def get_fields(
     return field_map
 
 
+def delete_field(
+    bitable_token: str,
+    field_id: str,
+    app_id: Optional[str] = None,
+    app_secret: Optional[str] = None
+) -> bool:
+    """
+    删除字段（列）
+
+    Args:
+        bitable_token: Bitable Token
+        field_id: 字段 ID
+        app_id: 应用 ID
+        app_secret: 应用密钥
+
+    Returns:
+        是否成功
+    """
+    _app_id = app_id or APP_ID
+    _app_secret = app_secret or APP_SECRET
+
+    app_token, table_id = parse_bitable_token(bitable_token)
+    token = get_tenant_access_token(_app_id, _app_secret)
+
+    url = f"{BASE_URL}/bitable/v1/apps/{app_token}/tables/{table_id}/fields/{field_id}"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    resp = requests.delete(url, headers=headers)
+    result = resp.json()
+
+    if result.get("code") == 0:
+        print(f"   ✅ 字段删除成功: {field_id}")
+        return True
+    else:
+        print(f"   ❌ 字段删除失败: {result.get('msg')}")
+        return False
+
+
 # ==================== 主功能 ====================
 
 def create_bitable_with_data(
@@ -439,6 +477,21 @@ def demo_crud(
         print("\n   查询验证删除...")
         records = list_records(bitable_token, app_id, app_secret)
         print(f"     剩余 {len(records)} 条记录")
+
+    # 删除"姓名"列（我们创建的第一个字段）
+    print("\n   删除'姓名'列...")
+    fields = get_fields(bitable_token, app_id, app_secret)
+    if "姓名" in fields:
+        field_id = fields["姓名"]
+        print(f"     字段: 姓名 ({field_id})")
+        delete_field(bitable_token, field_id, app_id, app_secret)
+
+        # 查验证列删除
+        print("\n   查询验证列删除...")
+        remaining_fields = get_fields(bitable_token, app_id, app_secret)
+        print(f"     剩余字段: {list(remaining_fields.keys())}")
+    else:
+        print("     未找到'姓名'字段")
 
 
 def main():
