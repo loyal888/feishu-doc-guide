@@ -239,6 +239,79 @@ def create_board_node(
         return None
 
 
+def create_connector(
+    whiteboard_id: str,
+    start_node_id: str,
+    end_node_id: str,
+    shape: str = "straight",
+    app_id: Optional[str] = None,
+    app_secret: Optional[str] = None
+) -> Optional[str]:
+    """
+    在画板中创建连线
+
+    Args:
+        whiteboard_id: 画板 ID
+        start_node_id: 起始节点 ID
+        end_node_id: 结束节点 ID
+        shape: 连线形状，如 "straight"(直线), "polyline"(折线), "curve"(曲线)
+        app_id: 应用 ID
+        app_secret: 应用密钥
+
+    Returns:
+        连线节点 ID
+    """
+    _app_id = app_id or APP_ID
+    _app_secret = app_secret or APP_SECRET
+
+    token = get_tenant_access_token(_app_id, _app_secret)
+
+    url = f"{BASE_URL}/board/v1/whiteboards/{whiteboard_id}/nodes"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    # 连线使用 connector 类型
+    # 根据飞书 API 文档，start 和 end 是 connector.info 类型
+    node_data = {
+        "type": "connector",
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100,
+        "connector": {
+            "start": {
+                "id": start_node_id,
+                "anchor": "right"
+            },
+            "end": {
+                "id": end_node_id,
+                "anchor": "left"
+            },
+            "shape": shape
+        }
+    }
+
+    body = {"nodes": [node_data]}
+
+    resp = requests.post(url, headers=headers, json=body)
+    result = resp.json()
+
+    if result.get("code") == 0:
+        ids = result.get("data", {}).get("ids", [])
+        if ids:
+            node_id = ids[0]
+            print(f"   ✅ 连线创建成功: {node_id}")
+            return node_id
+        else:
+            print(f"   ⚠️ 连线创建返回空 ids")
+            return None
+    else:
+        print(f"   ❌ 连线创建失败: {result.get('msg')}")
+        return None
+
+
 def add_text_block(
     document_id: str,
     text: str,
@@ -347,6 +420,31 @@ def demo_board():
             )
 
             print(f"\n   ✅ 创建了 {sum(1 for n in [node1, node2, node3] if n)} 个节点")
+
+            # 创建连线
+            if node1 and node2 and node3:
+                print("\n📌 创建连线...")
+                time.sleep(1)
+
+                # 连接开始 -> 判断
+                conn1 = create_connector(
+                    whiteboard_id=whiteboard_id,
+                    start_node_id=node1,
+                    end_node_id=node2,
+                    shape="straight"
+                )
+
+                time.sleep(1)
+
+                # 连接判断 -> 结束
+                conn2 = create_connector(
+                    whiteboard_id=whiteboard_id,
+                    start_node_id=node2,
+                    end_node_id=node3,
+                    shape="straight"
+                )
+
+                print(f"   ✅ 创建了 {sum(1 for c in [conn1, conn2] if c)} 条连线")
 
         # 添加使用说明
         print("\n📌 添加使用说明...")
