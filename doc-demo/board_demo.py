@@ -273,7 +273,7 @@ def create_connector(
     }
 
     # 连线使用 connector 类型
-    # 根据飞书 API 文档，start 和 end 是 connector.info 类型
+    # 根据实际数据结构，position 是包含 x, y 的对象
     node_data = {
         "type": "connector",
         "x": 0,
@@ -282,14 +282,31 @@ def create_connector(
         "height": 100,
         "connector": {
             "start": {
-                "id": start_node_id,
-                "anchor": "right"
+                "arrow_style": "none",
+                "attached_object": {
+                    "id": start_node_id,
+                    "position": {
+                        "x": 1,
+                        "y": 0.5
+                    },
+                    "snap_to": "right"
+                }
             },
             "end": {
-                "id": end_node_id,
-                "anchor": "left"
+                "arrow_style": "line_arrow",
+                "attached_object": {
+                    "id": end_node_id,
+                    "position": {
+                        "x": 0,
+                        "y": 0.5
+                    },
+                    "snap_to": "left"
+                }
             },
-            "shape": shape
+            "shape": shape,
+            "specified_coordinate": True,
+            "caption_auto_direction": False,
+            "turning_points": []
         }
     }
 
