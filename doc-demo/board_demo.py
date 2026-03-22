@@ -155,7 +155,7 @@ def get_board_nodes(
 
 def create_board_node(
     whiteboard_id: str,
-    node_type: str,
+    shape_type: str,
     x: float,
     y: float,
     width: float,
@@ -170,7 +170,7 @@ def create_board_node(
 
     Args:
         whiteboard_id: 画板 ID
-        node_type: 节点类型，如 "rect", "ellipse", "text_shape" 等
+        shape_type: 形状类型，如 "rect", "ellipse", "diamond" 等
         x: X 坐标
         y: Y 坐标
         width: 宽度
@@ -194,12 +194,17 @@ def create_board_node(
         "Content-Type": "application/json"
     }
 
+    # 对于 rect, ellipse, diamond 等形状，需要使用 composite_shape 类型
+    # 并在 composite_shape 中指定子类型
     node_data = {
-        "type": node_type,
+        "type": "composite_shape",
         "x": x,
         "y": y,
         "width": width,
-        "height": height
+        "height": height,
+        "composite_shape": {
+            "type": shape_type
+        }
     }
 
     if text:
@@ -213,7 +218,8 @@ def create_board_node(
     if parent_id:
         node_data["parent_id"] = parent_id
 
-    body = {"node": node_data}
+    # 根据飞书 API 文档，请求体应该是 nodes 数组
+    body = {"nodes": [node_data]}
 
     resp = requests.post(url, headers=headers, json=body)
     result = resp.json()
@@ -298,10 +304,15 @@ def demo_board():
             # 创建一些基本图形
             print("\n📌 创建图形节点...")
             
+            import time
+
+            # 等待画板数据准备好
+            time.sleep(2)
+
             # 创建矩形（开始）
             node1 = create_board_node(
                 whiteboard_id=whiteboard_id,
-                node_type="rect",
+                shape_type="rect",
                 x=100,
                 y=100,
                 width=120,
@@ -309,10 +320,12 @@ def demo_board():
                 text="开始"
             )
 
+            time.sleep(1)
+
             # 创建菱形（判断）
             node2 = create_board_node(
                 whiteboard_id=whiteboard_id,
-                node_type="diamond",
+                shape_type="diamond",
                 x=300,
                 y=100,
                 width=100,
@@ -320,10 +333,12 @@ def demo_board():
                 text="判断"
             )
 
+            time.sleep(1)
+
             # 创建椭圆（结束）
             node3 = create_board_node(
                 whiteboard_id=whiteboard_id,
-                node_type="ellipse",
+                shape_type="ellipse",
                 x=500,
                 y=100,
                 width=120,
