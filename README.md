@@ -41,11 +41,24 @@ pip install -r requirements.txt
 
 ### 2. 配置环境变量
 
-创建 `.env` 文件：
+#### 获取应用凭证
+
+1. 访问 [飞书开放平台](https://open.feishu.cn/app)
+2. 创建企业自建应用
+3. 进入应用详情页，点击「凭证与基础信息」
+4. 复制 **App ID** 和 **App Secret**
+
+#### 创建 .env 文件
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件，填入你的应用凭证：
 
 ```env
-APP_ID=your_app_id
-APP_SECRET=your_app_secret
+APP_ID=cli_xxxxxxxxxxxxxxxx
+APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### 3. 运行示例
